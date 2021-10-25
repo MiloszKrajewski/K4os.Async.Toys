@@ -1,0 +1,52 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2024
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "K4os.Async.Toys", "K4os.Async.Toys\K4os.Async.Toys.csproj", "{80541E4B-5C7C-495E-8408-BF8852CA7F10}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "K4os.Async.Toys.Test", "K4os.Async.Toys.Test\K4os.Async.Toys.Test.csproj", "{D14083A4-2123-4ED6-9ACE-A0029AF21FD2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{835ECDA0-7229-4D96-8B74-8D9F119E6683}"
+	ProjectSection(SolutionItems) = preProject
+		..\build.fsx = ..\build.fsx
+		..\build.tools.fsx = ..\build.tools.fsx
+		..\CHANGES.md = ..\CHANGES.md
+		..\paket.dependencies = ..\paket.dependencies
+		..\README.md = ..\README.md
+		..\.secrets.cfg = ..\.secrets.cfg
+		..\Common.targets = ..\Common.targets
+		..\LICENSE = ..\LICENSE
+		..\settings.cfg = ..\settings.cfg
+		..\.gitignore = ..\.gitignore
+		..\Signing.targets = ..\Signing.targets
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "K4os.Async.Toys.App", "K4os.Async.Toys.App\K4os.Async.Toys.App.csproj", "{F8BCA8B2-4EAF-4BC4-A366-A4DA26DB9BB4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{80541E4B-5C7C-495E-8408-BF8852CA7F10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80541E4B-5C7C-495E-8408-BF8852CA7F10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80541E4B-5C7C-495E-8408-BF8852CA7F10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80541E4B-5C7C-495E-8408-BF8852CA7F10}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D14083A4-2123-4ED6-9ACE-A0029AF21FD2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D14083A4-2123-4ED6-9ACE-A0029AF21FD2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D14083A4-2123-4ED6-9ACE-A0029AF21FD2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D14083A4-2123-4ED6-9ACE-A0029AF21FD2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F8BCA8B2-4EAF-4BC4-A366-A4DA26DB9BB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8BCA8B2-4EAF-4BC4-A366-A4DA26DB9BB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8BCA8B2-4EAF-4BC4-A366-A4DA26DB9BB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8BCA8B2-4EAF-4BC4-A366-A4DA26DB9BB4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AC291847-BF31-43DD-A795-882CF077FF7B}
+	EndGlobalSection
+EndGlobal
