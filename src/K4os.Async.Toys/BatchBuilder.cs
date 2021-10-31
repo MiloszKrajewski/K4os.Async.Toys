@@ -10,14 +10,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace K4os.Async.Toys
 {
-	/// <summary>Batch builder factory.</summary>
-	public static class BatchBuilder
-	{
-		internal static readonly UnboundedChannelOptions ChannelOptions = new() {
-			SingleReader = true,
-		};
-	}
-
 	/// <summary>Request batch builder.</summary>
 	/// <typeparam name="TRequest">Type of request.</typeparam>
 	/// <typeparam name="TResponse">Type of response.</typeparam>
@@ -56,10 +48,10 @@ namespace K4os.Async.Toys
 			Func<TResponse, TKey> responseKey,
 			Func<TRequest[], Task<TResponse[]>> requestMany,
 			IBatchBuilderSettings? settings = null,
-			ILogger? log = null,
+			ILogger? logger = null,
 			ITimeSource? time = null)
 		{
-			Log = log ?? NullLogger.Instance;
+			Log = logger ?? NullLogger.Instance;
 			_time = time ?? TimeSource.Default;
 			_settings = settings = Validate(settings ?? new BatchBuilderSettings());
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 
@@ -25,9 +26,10 @@ namespace K4os.Async.Toys.Internal
 		}
 
 		public static async Task<List<T>?> ReadManyAsync<T>(
-			this ChannelReader<T> reader, int length = int.MaxValue)
+			this ChannelReader<T> reader, int length = int.MaxValue, 
+			CancellationToken token = default)
 		{
-			var ready = await reader.WaitToReadAsync();
+			var ready = await reader.WaitToReadAsync(token);
 			if (!ready) return null;
 
 			var list = default(List<T>);
