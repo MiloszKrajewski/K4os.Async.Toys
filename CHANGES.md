@@ -1,2 +1,3 @@
-## 0.0.1 (2021/10/31)
-* initial release
+## 0.0.2 (2021/04/02)
+* ADDED: AliveKeeper
+* ADDED: BatchBuilder
