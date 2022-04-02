@@ -10,23 +10,53 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace K4os.Async.Toys
 {
+	/// <summary>Component maintaining claims over items alive in predefined intervals.</summary>
+	/// <typeparam name="T">Type of item.</typeparam>
 	public interface IAliveKeeper<in T>: IDisposable
 	{
+		/// <summary>Start keeping claim alive.</summary>
+		/// <param name="item">Claim to be kept alive.</param>
+		/// <param name="token">Cancellation token.</param>
 		void Upkeep(T item, CancellationToken token = default);
+
+		/// <summary>
+		/// Deletes claim. Please note, this method not only stops keeping claim alive, but
+		/// also actively executes delete action on it indicating that item is no longer needed
+		/// (ie: has been successfully processed).
+		/// </summary>
+		/// <param name="item">Claim to be deleted.</param>
+		/// <param name="token">Cancellation token.</param>
+		/// <returns>Task indicating that operation has been successful.</returns>
 		Task Delete(T item, CancellationToken token = default);
+		
+		/// <summary>
+		/// Forgets claim. Please note, this method just stops keeping the claim, so other
+		/// can take it, for example when item has not been processed, but processor is
+		/// giving up. 
+		/// </summary>
+		/// <param name="item">Claim to be forgotten.</param>
 		void Forget(T item);
 
+		/// <summary>
+		/// Shuts keeping claim alive down. All actions which are in progress are going to be
+		/// finished but all "keep alive loops" are going to be cancelled (<see cref="Forget"/>).
+		/// </summary>
+		/// <param name="token">Cancellation token.</param>
+		/// <returns>Task indicating that operation has been successful.</returns>
 		Task Shutdown(CancellationToken token = default);
 	}
 
+	/// <summary>Component maintaining claims over items alive in predefined intervals.</summary>
+	/// <typeparam name="T">Type of item.</typeparam>
 	public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 	{
+		/// <summary>Log.</summary>
 		protected readonly ILogger Log;
 
 		private readonly ITimeSource _time;
 		private readonly IAliveKeeperSettings _settings;
 
-		private readonly ConcurrentDictionary<T, int> _items = new();
+		private readonly ConcurrentDictionary<T, object?> _items = new();
 
 		private readonly Func<T[], Task<T[]>> _touchAction;
 		private readonly Func<T[], Task<T[]>>? _deleteAction;
@@ -39,6 +69,15 @@ namespace K4os.Async.Toys
 
 		private readonly SemaphoreSlim _mutex = new(1);
 
+		/// <summary>
+		/// Creates new instance of <see cref="AliveKeeper{T}"/>.
+		/// </summary>
+		/// <param name="touchAction">Action performed to keep object claim.</param>
+		/// <param name="deleteAction">Action performed to delete object.</param>
+		/// <param name="keyToString">Extracts key from object.</param>
+		/// <param name="settings">Settings.</param>
+		/// <param name="log">Logger.</param>
+		/// <param name="time">Time source.</param>
 		public AliveKeeper(
 			Func<T[], Task<T[]>> touchAction,
 			Func<T[], Task<T[]>>? deleteAction,
@@ -89,14 +128,24 @@ namespace K4os.Async.Toys
 		private bool IsDisposing => _cancel.IsCancellationRequested;
 		private T[] ActiveOnly(IEnumerable<T> items) => items.Where(IsActive).ToArray();
 		private void Deactivate(T item) => _items.TryRemove(item, out _);
-		private bool TryActivate(T item) => _items.TryAdd(item, 0);
+		private bool TryActivate(T item) => _items.TryAdd(item, null);
 
+		/// <summary>Action to touch / keep claim on objects.</summary>
+		/// <param name="items">Objects to update.</param>
+		/// <returns>Successfully touched items.</returns>
 		protected Task<T[]> OnTouch(T[] items) =>
 			_touchAction(items);
 
+		/// <summary>Action to delete objects.</summary>
+		/// <param name="items">Objects to delete.</param>
+		/// <returns>Successfully deleted items.</returns>
 		protected Task<T[]> OnDelete(T[] items) =>
 			_deleteAction is null ? Task.FromResult(items) : _deleteAction(items);
 
+		/// <summary>Delays execution.</summary>
+		/// <param name="delay">Delay.</param>
+		/// <param name="token">Cancellation token.</param>
+		/// <returns>Task.</returns>
 		protected virtual Task Delay(TimeSpan delay, CancellationToken token) =>
 			_time.Delay(delay, token);
 
@@ -128,7 +177,7 @@ namespace K4os.Async.Toys
 
 		private async Task TouchOne(string display, T item)
 		{
-			Log.LogDebug("Touching [{0}]...", display);
+			Log.LogDebug("Touching [{key}]...", display);
 
 			try
 			{
@@ -142,7 +191,7 @@ namespace K4os.Async.Toys
 
 		private async Task DeleteOne(string display, T item)
 		{
-			Log.LogDebug("Deleting [{0}]...", display);
+			Log.LogDebug("Deleting [{key}]...", display);
 
 			try
 			{
@@ -154,6 +203,9 @@ namespace K4os.Async.Toys
 			}
 		}
 
+		/// <summary>Method to display item key.</summary>
+		/// <param name="key">Key.</param>
+		/// <returns>Key in human readable format.</returns>
 		protected virtual string Display(T key) =>
 			_keyToString?.Invoke(key) ?? key.ToString() ?? "<null>";
 
@@ -195,6 +247,9 @@ namespace K4os.Async.Toys
 			}
 		}
 
+		/// <summary>Called when item needs to be deleted.</summary>
+		/// <param name="item">Item to be deleted.</param>
+		/// <param name="token">Cancellation token.</param>
 		protected async Task DeleteOneLoop(T item, CancellationToken token)
 		{
 			if (!IsActive(item))
@@ -254,6 +309,11 @@ namespace K4os.Async.Toys
 			return !giveUp;
 		}
 
+		/// <summary>
+		/// Starts a loop to touch / keep claim alive.
+		/// </summary>
+		/// <param name="item">Item.</param>
+		/// <param name="token">Cancellation token.</param>
 		public void Upkeep(T item, CancellationToken token = default)
 		{
 			if (IsDisposing) 
@@ -262,6 +322,11 @@ namespace K4os.Async.Toys
 			Task.Run(() => TouchOneLoop(item, token), token).Forget();
 		}
 
+		/// <summary>
+		/// Deletes item when it hase been processed.
+		/// </summary>
+		/// <param name="item">Item.</param>
+		/// <param name="token">Cancellation token.</param>
 		public async Task Delete(T item, CancellationToken token = default)
 		{
 			if (IsDisposing)
@@ -270,8 +335,16 @@ namespace K4os.Async.Toys
 			await DeleteOneLoop(item, token);
 		}
 
+		/// <summary>
+		/// Forgets about item. It does not mean it gets deleted, it just stops keeping it alive.
+		/// </summary>
+		/// <param name="item">Item.</param>
 		public void Forget(T item) => Deactivate(item);
 
+		/// <summary>
+		/// Shuts down all keep alive loops.
+		/// </summary>
+		/// <param name="token">Cancellation token.</param>
 		public async Task Shutdown(CancellationToken token = default)
 		{
 			var delay = 0.01;
@@ -286,6 +359,10 @@ namespace K4os.Async.Toys
 			}
 		}
 
+		/// <summary>
+		/// Shuts down all keep alive loops, and waits for them to finish.
+		/// </summary>
+		/// <param name="token">Cancellation token.</param>
 		public void ShutdownAndWait(CancellationToken token = default)
 		{
 			var task = Task.Factory.StartNew(
@@ -294,6 +371,11 @@ namespace K4os.Async.Toys
 			task.Wait(token);
 		}
 
+		/// <summary>
+		/// Disposes the <see cref="AliveKeeper{T}"/>.
+		/// Shuts down all keep alive loops and waits for them to finish.
+		/// </summary>
+		/// <param name="disposing"><c>true</c> if triggered by user.</param>
 		protected virtual void Dispose(bool disposing)
 		{
 			if (!disposing) return;
@@ -306,6 +388,10 @@ namespace K4os.Async.Toys
 				_mutex);
 		}
 
+		/// <summary>
+		/// Disposes the <see cref="AliveKeeper{T}"/>.
+		/// Shuts down all keep alive loops and waits for them to finish.
+		/// </summary>
 		public void Dispose()
 		{
 			Dispose(true);

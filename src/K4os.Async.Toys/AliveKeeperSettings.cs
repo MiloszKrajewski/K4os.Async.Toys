@@ -1,24 +1,53 @@
 using System;
 
-namespace K4os.Async.Toys
-{
-	public interface IAliveKeeperSettings
-	{
-		TimeSpan TouchInterval { get; }
-		int TouchBatchSize { get; }
-		TimeSpan TouchBatchDelay { get; }
-		int DeleteBatchSize { get; }
-		TimeSpan RetryInterval { get; }
-		int RetryLimit { get; }
-	}
+namespace K4os.Async.Toys;
 
-	public class AliveKeeperSettings: IAliveKeeperSettings
-	{
-		public TimeSpan TouchInterval { get; set; }
-		public int TouchBatchSize { get; set; } = 1;
-		public TimeSpan TouchBatchDelay { get; set; }
-		public int DeleteBatchSize { get; set; } = 1;
-		public TimeSpan RetryInterval { get; set; }
-		public int RetryLimit { get; set; }
-	}
+/// <summary>
+/// Alive keeper settings.
+/// </summary>
+public interface IAliveKeeperSettings
+{
+	/// <summary>Touch interval.</summary>
+	TimeSpan TouchInterval { get; }
+
+	/// <summary>Batch size for touching.</summary>
+	int TouchBatchSize { get; }
+
+	/// <summary>
+	/// Maximum delay of touching (between scheduling and execution).
+	/// </summary>
+	TimeSpan TouchBatchDelay { get; }
+
+	/// <summary>Batch size for deletion.</summary>
+	int DeleteBatchSize { get; }
+
+	/// <summary>Retry interval for deletion.</summary>
+	TimeSpan RetryInterval { get; }
+
+	/// <summary>Number of retries for deletion.</summary>
+	int RetryLimit { get; }
+}
+
+/// <summary>
+/// Alive keeper settings. 
+/// </summary>
+public class AliveKeeperSettings: IAliveKeeperSettings
+{
+	/// <inheritdoc />
+	public TimeSpan TouchInterval { get; set; }
+
+	/// <inheritdoc />
+	public int TouchBatchSize { get; set; } = 1;
+
+	/// <inheritdoc />
+	public TimeSpan TouchBatchDelay { get; set; }
+
+	/// <inheritdoc />
+	public int DeleteBatchSize { get; set; } = 1;
+
+	/// <inheritdoc />
+	public TimeSpan RetryInterval { get; set; }
+
+	/// <inheritdoc />
+	public int RetryLimit { get; set; }
 }

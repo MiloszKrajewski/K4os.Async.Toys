@@ -29,6 +29,7 @@ namespace K4os.Async.Toys
 		IBatchBuilder<TRequest, TResponse>
 		where TKey: notnull
 	{
+		/// <summary>Logger.</summary>
 		protected readonly ILogger Log;
 
 		private readonly ITimeSource _time;
@@ -85,7 +86,7 @@ namespace K4os.Async.Toys
 		{
 			var length = _settings.BatchSize;
 			var delay = _settings.BatchDelay;
-			
+
 			while (!_channel.Reader.Completion.IsCompleted)
 			{
 				var requests = await ReadManyAsync(length, delay);
@@ -109,15 +110,28 @@ namespace K4os.Async.Toys
 			return list;
 		}
 
+		/// <summary>Gets key from request. It will be used to match requests with responses.</summary>
+		/// <param name="request">Request.</param>
+		/// <returns>Request key.</returns>
 		protected TKey RequestKey(TRequest request) =>
 			_requestKey(request);
 
+		/// <summary>Gets key from response. It is used to match response with request.</summary>
+		/// <param name="response">Response.</param>
+		/// <returns>Response key.</returns>
 		protected TKey ResponseKey(TResponse response) =>
 			_responseKey(response);
 
+		/// <summary>Action to send multiple requests.</summary>
+		/// <param name="requests">Requests.</param>
+		/// <returns>Array of responses.</returns>
 		protected Task<TResponse[]> RequestMany(TRequest[] requests) =>
 			_requestMany(requests);
 
+		/// <summary>Delays execution.</summary>
+		/// <param name="delay">Delay amount.</param>
+		/// <param name="token">Cancellation token.</param>
+		/// <returns></returns>
 		protected Task Delay(TimeSpan delay, CancellationToken token) =>
 			_time.Delay(delay, token);
 
@@ -185,6 +199,9 @@ namespace K4os.Async.Toys
 			}
 		}
 
+		/// <summary>Disposes batch builder. Tries to handle all pending requests.</summary>
+		/// <param name="disposing"><c>true</c> if triggered by user,
+		/// <c>false</c> if triggered by GC.</param>
 		protected virtual void Dispose(bool disposing)
 		{
 			if (!disposing) return;
@@ -201,6 +218,7 @@ namespace K4os.Async.Toys
 			}
 		}
 
+		/// <summary>Disposes batch builder. Tries to handle all pending requests.</summary>
 		public void Dispose()
 		{
 			Dispose(true);

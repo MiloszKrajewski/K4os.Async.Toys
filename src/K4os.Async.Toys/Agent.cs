@@ -8,37 +8,55 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace K4os.Async.Toys
 {
+	/// <summary>Agent interface.</summary>
 	public interface IAgent: IDisposable
 	{
+		/// <summary>Starts agent. Does nothing if agent is already started.</summary>
 		void Start();
+		
+		/// <summary>Awaitable indicator that agent finished working.</summary>
 		public Task Done { get; }
 	}
 	
+	/// <summary>Agent interface with inbox queue.</summary>
+	/// <typeparam name="T">Type of inbox items.</typeparam>
 	public interface IAgent<in T>: IAgent
 	{
+		/// <summary>Enqueues an item to be processed by agent.</summary>
+		/// <param name="item">Item to be processed.</param>
 		public void Enqueue(T item);
 	}
 
+	/// <summary>Agent's context from inside handler.</summary>
 	public interface IAgentContext
 	{
+		/// <summary>Log.</summary>
 		ILogger Log { get; }
+		
+		/// <summary>Cancellation token.</summary>
 		CancellationToken Token { get; }
 	}
 
+	/// <summary>Agent's context from inside handler.</summary>
+	/// <typeparam name="T">Type of items in queue.</typeparam>
 	public interface IAgentContext<T>: IAgentContext
 	{
-		ChannelReader<T> Queue { get; }
+		/// <summary>Item queue.</summary>
+		Channel<T> Queue { get; }
 	}
 
 	/// <summary>Agent base class.</summary>
 	public abstract class AbstractAgent: IAgent, IAgentContext
 	{
-		/// <summary>Default agent channel options.</summary>
+		/// <summary>Default agent channel options.
+		/// NOTE: this is *static readonly* field used in derived classes.
+		/// </summary>
 		protected static readonly UnboundedChannelOptions ChannelOptions = new() {
 			SingleReader = true,
 			AllowSynchronousContinuations = false,
 		};
 		
+		/// <summary>Agent's log.</summary>
 		protected ILogger Log { get; }
 
 		private readonly CancellationTokenSource _cancel;
@@ -57,10 +75,10 @@ namespace K4os.Async.Toys
 			_done = Task.Run(Loop);
 		}
 
-		/// <summary>Starts agent. If agent is already running does nothing.</summary>
+		/// <inheritdoc />
 		public void Start() => _ready.TrySetResult(null);
 
-		/// <summary>Agent stopped processing..</summary>
+		/// <inheritdoc />
 		public Task Done => _done;
 
 		private async Task Loop()
@@ -101,9 +119,6 @@ namespace K4os.Async.Toys
 			_cancel.Cancel();
 			_ready.TrySetCanceled(_cancel.Token);
 			_done.Wait(CancellationToken.None);
-
-			_cancel.Dispose();
-			_done.Dispose();
 		}
 
 		/// <summary>Stop and dispose agent.</summary>
@@ -131,6 +146,7 @@ namespace K4os.Async.Toys
 		public Agent(Func<IAgentContext, Task> action, ILogger? logger = null): base(logger) =>
 			_action = action.Required(nameof(action));
 
+		/// <inheritdoc />
 		protected override Task Execute() => _action(this);
 	}
 
@@ -147,6 +163,7 @@ namespace K4os.Async.Toys
 		public Agent(Func<IAgentContext<T>, Task> action, ILogger? logger = null): base(logger) => 
 			_action = action.Required(nameof(action));
 
+		/// <inheritdoc />
 		protected override Task Execute() => _action(this);
 
 		/// <summary>Enqueues item to be processed by agent.</summary>
@@ -163,6 +180,6 @@ namespace K4os.Async.Toys
 		private static InvalidOperationException QueueIsFull() =>
 			new("Internal queue is full");
 		
-		ChannelReader<T> IAgentContext<T>.Queue => _queue;
+		Channel<T> IAgentContext<T>.Queue => _queue;
 	}
 }
