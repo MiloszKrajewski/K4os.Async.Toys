@@ -94,16 +94,14 @@ namespace K4os.Async.Toys
 
 			var token = _cancel.Token;
 
-			while (true)
+			while (!token.IsCancellationRequested)
 			{
 				try
 				{
-					token.ThrowIfCancellationRequested();
 					await Execute().ConfigureAwait(false);
 				}
 				catch (OperationCanceledException) when (token.IsCancellationRequested)
 				{
-					Log.LogDebug("Execution canceled");
 					return;
 				}
 				catch (Exception e)
