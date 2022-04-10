@@ -77,6 +77,13 @@ namespace K4os.Async.Toys
 
 		/// <inheritdoc />
 		public void Start() => _ready.TrySetResult(null);
+		
+		private Task Stop()
+		{
+			_cancel.Cancel();
+			_ready.TrySetCanceled(_cancel.Token);
+			return _done;
+		}
 
 		/// <inheritdoc />
 		public Task Done => _done;
@@ -116,9 +123,7 @@ namespace K4os.Async.Toys
 		{
 			if (!disposing) return;
 
-			_cancel.Cancel();
-			_ready.TrySetCanceled(_cancel.Token);
-			_done.Wait(CancellationToken.None);
+			Stop().Wait(CancellationToken.None);
 		}
 
 		/// <summary>Stop and dispose agent.</summary>
