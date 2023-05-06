@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using K4os.Async.Toys.Internal;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -126,7 +123,16 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 	private static T Pass(T x) => x;
 	private bool IsActive(T item) => _items.ContainsKey(item);
 	private bool IsDisposing => _cancel.IsCancellationRequested;
-	private T[] ActiveOnly(IEnumerable<T> items) => items.Where(IsActive).ToArray();
+
+	private T[] ActiveOnly(T[] items)
+	{
+		// this method is optimized for the fact that most of the time
+		// all of them will be active, so same array can be returned
+		return items.Length <= 0 || items.All(IsActive) 
+			? items
+			: items.Where(IsActive).ToArray();
+	}
+	
 	private void Deactivate(T item) => _items.TryRemove(item, out _);
 	private bool TryActivate(T item) => _items.TryAdd(item, null);
 
