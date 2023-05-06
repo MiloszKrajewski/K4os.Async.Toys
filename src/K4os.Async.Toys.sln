@@ -3,26 +3,35 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27130.2024
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "K4os.Async.Toys", "K4os.Async.Toys\K4os.Async.Toys.csproj", "{80541E4B-5C7C-495E-8408-BF8852CA7F10}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "K4os.Async.Toys.Test", "K4os.Async.Toys.Test\K4os.Async.Toys.Test.csproj", "{D14083A4-2123-4ED6-9ACE-A0029AF21FD2}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{835ECDA0-7229-4D96-8B74-8D9F119E6683}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".environment", ".environment", "{29857C58-8BF4-45C1-8C10-1202CF690BF9}"
 	ProjectSection(SolutionItems) = preProject
-		..\build.fsx = ..\build.fsx
-		..\build.tools.fsx = ..\build.tools.fsx
-		..\CHANGES.md = ..\CHANGES.md
-		..\paket.dependencies = ..\paket.dependencies
-		..\README.md = ..\README.md
 		..\.secrets.cfg = ..\.secrets.cfg
-		..\Common.targets = ..\Common.targets
-		..\LICENSE = ..\LICENSE
-		..\settings.cfg = ..\settings.cfg
 		..\.gitignore = ..\.gitignore
-		..\Signing.targets = ..\Signing.targets
+		..\Directory.Packages.props = ..\Directory.Packages.props
+		..\Directory.Build.props = ..\Directory.Build.props
+		..\Directory.Build.targets = ..\Directory.Build.targets
+		..\settings.cfg = ..\settings.cfg
+		..\.env = ..\.env
+		..\global.json = ..\global.json
+		..\nuget.config = ..\nuget.config
+		..\paket.dependencies = ..\paket.dependencies
+		..\PublicAssembly.props = ..\PublicAssembly.props
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "K4os.Async.Toys.App", "K4os.Async.Toys.App\K4os.Async.Toys.App.csproj", "{F8BCA8B2-4EAF-4BC4-A366-A4DA26DB9BB4}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".resources", ".resources", "{FCC5887E-6FEE-47CF-8580-27843FBDC1C9}"
+	ProjectSection(SolutionItems) = preProject
+		..\CHANGES.md = ..\CHANGES.md
+		..\LICENSE = ..\LICENSE
+		..\README.md = ..\README.md
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "_build", "..\.nuke\build\_build.csproj", "{17C2C146-01F7-4C31-89FF-F20958A8C147}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "K4os.Async.Toys", "K4os.Async.Toys\K4os.Async.Toys.csproj", "{C2DA133D-FC89-483B-9951-8AA5AE277E81}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "K4os.Async.Toys.Tests", "K4os.Async.Toys.Tests\K4os.Async.Toys.Tests.csproj", "{1FB5731C-2571-43BD-A19A-45110360FC44}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "K4os.Async.Toys.App", "K4os.Async.Toys.App\K4os.Async.Toys.App.csproj", "{3E541988-CA33-477D-907E-DA43944AF400}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,23 +39,27 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{80541E4B-5C7C-495E-8408-BF8852CA7F10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{80541E4B-5C7C-495E-8408-BF8852CA7F10}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{80541E4B-5C7C-495E-8408-BF8852CA7F10}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{80541E4B-5C7C-495E-8408-BF8852CA7F10}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D14083A4-2123-4ED6-9ACE-A0029AF21FD2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D14083A4-2123-4ED6-9ACE-A0029AF21FD2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D14083A4-2123-4ED6-9ACE-A0029AF21FD2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D14083A4-2123-4ED6-9ACE-A0029AF21FD2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F8BCA8B2-4EAF-4BC4-A366-A4DA26DB9BB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F8BCA8B2-4EAF-4BC4-A366-A4DA26DB9BB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F8BCA8B2-4EAF-4BC4-A366-A4DA26DB9BB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F8BCA8B2-4EAF-4BC4-A366-A4DA26DB9BB4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C2DA133D-FC89-483B-9951-8AA5AE277E81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2DA133D-FC89-483B-9951-8AA5AE277E81}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2DA133D-FC89-483B-9951-8AA5AE277E81}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2DA133D-FC89-483B-9951-8AA5AE277E81}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1FB5731C-2571-43BD-A19A-45110360FC44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1FB5731C-2571-43BD-A19A-45110360FC44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1FB5731C-2571-43BD-A19A-45110360FC44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1FB5731C-2571-43BD-A19A-45110360FC44}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3E541988-CA33-477D-907E-DA43944AF400}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3E541988-CA33-477D-907E-DA43944AF400}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3E541988-CA33-477D-907E-DA43944AF400}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3E541988-CA33-477D-907E-DA43944AF400}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17C2C146-01F7-4C31-89FF-F20958A8C147}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17C2C146-01F7-4C31-89FF-F20958A8C147}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {AC291847-BF31-43DD-A795-882CF077FF7B}
+		SolutionGuid = {232AFD6F-3E24-4FB8-B20C-C05AC1B0FDA5}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
 	EndGlobalSection
 EndGlobal

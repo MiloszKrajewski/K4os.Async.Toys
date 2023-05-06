@@ -65,7 +65,7 @@ namespace K4os.Async.Toys.App
 				}
 				catch (Exception e)
 				{
-					log.LogError(e, $"Failed to execute: {line}");
+					log.LogError(e, "Failed to execute: {Line}", line);
 				}
 			}
 
@@ -76,14 +76,14 @@ namespace K4os.Async.Toys.App
 
 		private static async Task<int[]> FakeTouch(ILogger log, int[] ids)
 		{
-			log.LogDebug($"Touch: {string.Join(",", ids)}");
+			log.LogDebug("Touch: {Ids}", string.Join(",", ids));
 			await Task.Delay(TimeSpan.FromSeconds(0.5));
 			return ids;
 		}
 
 		private static async Task<int[]> FakeDelete(ILogger log, int[] ids)
 		{
-			log.LogDebug($"Delete: {string.Join(",", ids)}");
+			log.LogDebug("Delete: {Ids}", string.Join(",", ids));
 			await Task.Delay(TimeSpan.FromSeconds(0.5));
 			return ids;
 		}

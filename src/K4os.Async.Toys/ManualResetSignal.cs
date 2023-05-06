@@ -11,9 +11,22 @@ public class ManualResetSignal
 {
 	private readonly object _lock = new();
 	private TaskCompletionSource<bool> _tcs = NewTaskCompletionSource();
+	private readonly ITimeSource? _timeSource;
 
 	private static TaskCompletionSource<bool> NewTaskCompletionSource() =>
 		new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+	/// <summary>
+	/// Creates new instance of <see cref="ManualResetSignal"/>.
+	/// </summary>
+	public ManualResetSignal() { }
+
+	/// <summary>
+	/// Creates new instance of <see cref="ManualResetSignal"/> with specified <see cref="ITimeSource"/>.
+	/// </summary>
+	/// <param name="timeSource">Time source for executing delay if needed.</param>
+	public ManualResetSignal(ITimeSource? timeSource) =>
+		_timeSource = timeSource;
 
 	private Task<bool> GetTask()
 	{
@@ -92,13 +105,13 @@ public class ManualResetSignal
 		return canBeCancelled ? WaitAsync(task, token, timeout) : task;
 	}
 
-	private static async Task<bool> WaitAsync(
+	private async Task<bool> WaitAsync(
 		Task task, CancellationToken token, TimeSpan timeout)
 	{
 		var combined = CancellationTokenSource.CreateLinkedTokenSource(token);
 		try
 		{
-			var done = await Task.WhenAny(task, Task.Delay(timeout, combined.Token));
+			var done = await Task.WhenAny(task, Delay(timeout, combined.Token));
 			return done == task;
 		}
 		finally
@@ -106,4 +119,9 @@ public class ManualResetSignal
 			combined.Cancel();
 		}
 	}
+
+	private Task Delay(TimeSpan timeout, CancellationToken token) =>
+		_timeSource is null
+			? Task.Delay(timeout, token)
+			: _timeSource.Delay(timeout, token);
 }
