@@ -1,8 +1,9 @@
-## 0.0.7 (2023/05/06)
+## 0.0.8 (2023/05/06)
 * CHANGED: build process
 * ADDED: GitHub actions
 * FIXED: Minor bug in AliveKeeper (sometimes actions were called with not items at all)
 * CHANGED: Minor optimization in AliveKeeper (removed unnecessary allocations)
+* ADDED: Explicit target for .NET 5
 
 ## 0.0.5 (2021/04/11)
 * ADDED: ITimeSource to ManualResetSignal
