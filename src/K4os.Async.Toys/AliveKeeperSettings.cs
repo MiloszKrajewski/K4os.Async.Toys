@@ -26,6 +26,9 @@ public interface IAliveKeeperSettings
 
 	/// <summary>Number of retries for deletion.</summary>
 	int RetryLimit { get; }
+
+	/// <summary>Level of concurrency for operations.</summary>
+	int Concurrency { get; }
 }
 
 /// <summary>
@@ -50,4 +53,7 @@ public class AliveKeeperSettings: IAliveKeeperSettings
 
 	/// <inheritdoc />
 	public int RetryLimit { get; set; }
+
+	/// <inheritdoc />
+	public int Concurrency { get; set; } = 1;
 }

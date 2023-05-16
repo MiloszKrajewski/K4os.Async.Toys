@@ -1,3 +1,6 @@
+## 0.0.9 (2023/05/16)
+* Added maximum concurrency setting
+
 ## 0.0.8 (2023/05/06)
 * CHANGED: build process
 * ADDED: GitHub actions

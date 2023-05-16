@@ -96,7 +96,7 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 			new BatchBuilderSettings {
 				BatchSize = settings.TouchBatchSize,
 				BatchDelay = settings.TouchBatchDelay,
-				Concurrency = 1,
+				Concurrency = settings.Concurrency,
 			},
 			log, time);
 
@@ -105,7 +105,7 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 			new BatchBuilderSettings {
 				BatchSize = settings.DeleteBatchSize,
 				BatchDelay = TimeSpan.Zero,
-				Concurrency = 1,
+				Concurrency = settings.Concurrency,
 			},
 			log, time);
 	}
@@ -118,6 +118,7 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 			DeleteBatchSize = settings.DeleteBatchSize.NotLessThan(1),
 			RetryInterval = settings.RetryInterval.NotLessThan(TimeSpan.Zero),
 			RetryLimit = settings.RetryLimit.NotLessThan(0),
+			Concurrency = settings.Concurrency.NotLessThan(1),
 		};
 
 	private static T Pass(T x) => x;
@@ -217,6 +218,7 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 	/// <param name="key">Key.</param>
 	/// <returns>Key in human readable format.</returns>
 	protected virtual string Display(T key) =>
+		// ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
 		_keyToString?.Invoke(key) ?? key.ToString() ?? "<null>";
 
 	private async Task TouchOneLoop(T item, CancellationToken token)
