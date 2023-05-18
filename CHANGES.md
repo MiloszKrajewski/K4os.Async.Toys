@@ -1,5 +1,6 @@
-## 0.0.9 (2023/05/16)
-* Added maximum concurrency setting
+## 0.0.10 (2023/05/18)
+* ADDED: maximum concurrency setting
+* ADDED: concurrency policies for AliveKeeper
 
 ## 0.0.8 (2023/05/06)
 * CHANGED: build process
