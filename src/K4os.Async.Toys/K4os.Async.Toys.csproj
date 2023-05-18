@@ -5,14 +5,15 @@
     <IsPackable>true</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="K4os.Async.Toys.Tests"/>
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)'=='net5.0' ">
-    <PackageReference Include="System.Threading.Channels" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.3" />
+    <PackageReference Include="System.Threading.Channels" Version="6.0.0"/>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.3"/>
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)'!='net5.0' ">
-    <PackageReference Include="System.Threading.Channels" Version="7.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
+    <PackageReference Include="System.Threading.Channels" Version="7.0.0"/>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0"/>
   </ItemGroup>
-  <Import Project="$(PublicAssemblyProps)" />
+  <Import Project="$(PublicAssemblyProps)"/>
 </Project>

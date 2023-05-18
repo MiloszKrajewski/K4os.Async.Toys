@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using K4os.Async.Toys.Internal;
 using System.Linq;
+using K4os.Async.Toys.SyncPolicy;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -61,10 +62,9 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 
 	private readonly IBatchBuilder<T, T> _touchBatch;
 	private readonly IBatchBuilder<T, T> _deleteBatch;
+	private readonly IAliveKeeperSyncPolicy _syncPolicy;
 
 	private readonly CancellationTokenSource _cancel = new();
-
-	private readonly SemaphoreSlim _mutex = new(1);
 
 	/// <summary>
 	/// Creates new instance of <see cref="AliveKeeper{T}"/>.
@@ -90,6 +90,14 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 		_touchAction = touchAction.Required(nameof(touchAction));
 		_deleteAction = deleteAction;
 		_keyToString = keyToString;
+		
+		_syncPolicy = _settings.SyncPolicy switch {
+			AliveKeeperSyncPolicy.Safe => new SafeSyncPolicy(),
+			_ when _settings.Concurrency <= 1 => new SafeSyncPolicy(),
+			AliveKeeperSyncPolicy.Unrestricted => UnrestrictedSyncPolicy.Instance,
+			AliveKeeperSyncPolicy.Alternating => new AlternatingSyncPolicy(),
+			_ => new SafeSyncPolicy(),
+		};
 
 		_touchBatch = new BatchBuilder<T, T, T>(
 			Pass, Pass, TouchMany,
@@ -162,27 +170,27 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 
 	private async Task<T[]> TouchMany(T[] items)
 	{
-		await _mutex.WaitAsync();
+		await _syncPolicy.EnterTouch();
 		try
 		{
 			return await OnTouch(ActiveOnly(items));
 		}
 		finally
 		{
-			_mutex.Release();
+			_syncPolicy.LeaveTouch();
 		}
 	}
 
 	private async Task<T[]> DeleteMany(T[] items)
 	{
-		await _mutex.WaitAsync();
+		await _syncPolicy.EnterDelete();
 		try
 		{
 			return await OnDelete(ActiveOnly(items));
 		}
 		finally
 		{
-			_mutex.Release();
+			_syncPolicy.LeaveDelete();
 		}
 	}
 
@@ -397,7 +405,7 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 		DisposableBag.DisposeMany(
 			_deleteBatch,
 			_touchBatch,
-			_mutex);
+			_syncPolicy);
 	}
 
 	/// <summary>
