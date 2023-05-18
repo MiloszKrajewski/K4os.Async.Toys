@@ -91,7 +91,7 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 		_deleteAction = deleteAction;
 		_keyToString = keyToString;
 		
-		_syncPolicy = _settings.SyncPolicy switch {
+		_syncPolicy = settings.SyncPolicy switch {
 			AliveKeeperSyncPolicy.Safe => new SafeSyncPolicy(),
 			_ when _settings.Concurrency <= 1 => new SafeSyncPolicy(),
 			AliveKeeperSyncPolicy.Unrestricted => UnrestrictedSyncPolicy.Instance,
@@ -127,6 +127,7 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 			RetryInterval = settings.RetryInterval.NotLessThan(TimeSpan.Zero),
 			RetryLimit = settings.RetryLimit.NotLessThan(0),
 			Concurrency = settings.Concurrency.NotLessThan(1),
+			SyncPolicy = settings.SyncPolicy,
 		};
 
 	private static T Pass(T x) => x;
