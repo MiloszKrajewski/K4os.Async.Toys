@@ -1,7 +1,8 @@
-## 0.0.11 (2023/05/18)
+## 0.0.12 (2023/05/18)
 * ADDED: maximum concurrency setting
 * ADDED: concurrency policies for AliveKeeper
 * FIXED: safe sync policy was deadlocking in some cases
+* ADDED: ability for agents to end their work without being disposed
 
 ## 0.0.8 (2023/05/06)
 * CHANGED: build process

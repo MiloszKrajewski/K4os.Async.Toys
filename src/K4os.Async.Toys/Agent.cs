@@ -1,7 +1,5 @@
 using System;
-using System.Threading;
 using System.Threading.Channels;
-using System.Threading.Tasks;
 using K4os.Async.Toys.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -13,11 +11,11 @@ public interface IAgent: IDisposable
 {
 	/// <summary>Starts agent. Does nothing if agent is already started.</summary>
 	void Start();
-		
+
 	/// <summary>Awaitable indicator that agent finished working.</summary>
 	public Task Done { get; }
 }
-	
+
 /// <summary>Agent interface with inbox queue.</summary>
 /// <typeparam name="T">Type of inbox items.</typeparam>
 public interface IAgent<in T>: IAgent
@@ -32,7 +30,7 @@ public interface IAgentContext
 {
 	/// <summary>Log.</summary>
 	ILogger Log { get; }
-		
+
 	/// <summary>Cancellation token.</summary>
 	CancellationToken Token { get; }
 }
@@ -55,7 +53,7 @@ public abstract class AbstractAgent: IAgent, IAgentContext
 		SingleReader = true,
 		AllowSynchronousContinuations = false,
 	};
-		
+
 	/// <summary>Agent's log.</summary>
 	protected ILogger Log { get; }
 
@@ -77,7 +75,7 @@ public abstract class AbstractAgent: IAgent, IAgentContext
 
 	/// <inheritdoc />
 	public void Start() => _ready.TrySetResult(null);
-		
+
 	private Task Stop()
 	{
 		_cancel.Cancel();
@@ -98,7 +96,11 @@ public abstract class AbstractAgent: IAgent, IAgentContext
 		{
 			try
 			{
-				await Execute().ConfigureAwait(false);
+				var next = await Execute().ConfigureAwait(false);
+				if (next) continue;
+
+				Log.LogDebug("agent finished work successfully");
+				return;
 			}
 			catch (OperationCanceledException) when (token.IsCancellationRequested)
 			{
@@ -112,8 +114,9 @@ public abstract class AbstractAgent: IAgent, IAgentContext
 	}
 
 	/// <summary>Actual implementation of single iteration.</summary>
-	/// <returns>Task indicating iteration is finished.</returns>
-	protected abstract Task Execute();
+	/// <returns>Task indicating iteration is finished, <c>true</c> if next iteration should be
+	/// scheduled, <c>false</c> if job is done and no more iterations are needed.</returns>
+	protected abstract Task<bool> Execute();
 
 	/// <summary>Stops agent.</summary>
 	/// <param name="disposing"><c>true</c> if agents is disposed by user.</param>
@@ -141,16 +144,16 @@ public abstract class AbstractAgent: IAgent, IAgentContext
 /// <summary>Agent base class.</summary>
 public partial class Agent: AbstractAgent
 {
-	private readonly Func<IAgentContext, Task> _action;
+	private readonly Func<IAgentContext, Task<bool>> _action;
 
 	/// <summary>Creates new agent.</summary>
 	/// <param name="logger">Logger.</param>
 	/// <param name="action">Action to be executed in the loop.</param>
-	public Agent(Func<IAgentContext, Task> action, ILogger? logger = null): base(logger) =>
+	public Agent(Func<IAgentContext, Task<bool>> action, ILogger? logger = null): base(logger) =>
 		_action = action.Required(nameof(action));
 
 	/// <inheritdoc />
-	protected override Task Execute() => _action(this);
+	protected override Task<bool> Execute() => _action(this);
 }
 
 /// <summary>Agent with a queue base class.</summary>
@@ -158,17 +161,17 @@ public partial class Agent: AbstractAgent
 public class Agent<T>: AbstractAgent, IAgent<T>, IAgentContext<T>
 {
 	private readonly Channel<T> _queue = Channel.CreateUnbounded<T>(ChannelOptions);
-	private readonly Func<IAgentContext<T>, Task> _action;
+	private readonly Func<IAgentContext<T>, Task<bool>> _action;
 
 	/// <summary>Creates new agent and starts it.</summary>
 	/// <param name="logger">Log.</param>
 	/// <param name="action">Agent's action.</param>
-	public Agent(Func<IAgentContext<T>, Task> action, ILogger? logger = null): base(logger) => 
+	public Agent(Func<IAgentContext<T>, Task<bool>> action, ILogger? logger = null): base(logger) =>
 		_action = action.Required(nameof(action));
 
 	/// <inheritdoc />
-	protected override Task Execute() => _action(this);
-
+	protected override Task<bool> Execute() => _action(this);
+	
 	/// <summary>Enqueues item to be processed by agent.</summary>
 	/// <param name="item">Item.</param>
 	/// <exception cref="InvalidOperationException">Thrown when queue is full.</exception>
@@ -182,6 +185,6 @@ public class Agent<T>: AbstractAgent, IAgent<T>, IAgentContext<T>
 
 	private static InvalidOperationException QueueIsFull() =>
 		new("Internal queue is full");
-		
+
 	Channel<T> IAgentContext<T>.Queue => _queue;
 }
