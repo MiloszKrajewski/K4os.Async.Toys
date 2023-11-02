@@ -35,6 +35,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "K4os.Async.Toys.App", "K4os
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmarks", "Benchmarks\Benchmarks.csproj", "{BA1AD6AB-F72E-4A0C-ACA7-AA328C70CD59}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playground", "Playground\Playground.csproj", "{5A8468E0-AB21-4749-AD96-6179566BF31F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +61,10 @@ Global
 		{BA1AD6AB-F72E-4A0C-ACA7-AA328C70CD59}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BA1AD6AB-F72E-4A0C-ACA7-AA328C70CD59}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BA1AD6AB-F72E-4A0C-ACA7-AA328C70CD59}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A8468E0-AB21-4749-AD96-6179566BF31F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A8468E0-AB21-4749-AD96-6179566BF31F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A8468E0-AB21-4749-AD96-6179566BF31F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A8468E0-AB21-4749-AD96-6179566BF31F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

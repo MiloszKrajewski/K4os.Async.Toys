@@ -56,7 +56,7 @@ namespace K4os.Async.Toys.App
 					switch (command)
 					{
 						case 's': 
-							keeper.Upkeep(argument);
+							keeper.Register(argument);
 							break;
 						case 'd':
 							await keeper.Delete(argument);

@@ -15,7 +15,7 @@ public interface IAliveKeeper<in T>: IDisposable
 	/// <summary>Start keeping claim alive.</summary>
 	/// <param name="item">Claim to be kept alive.</param>
 	/// <param name="token">Cancellation token.</param>
-	void Upkeep(T item, CancellationToken token = default);
+	void Register(T item, CancellationToken token = default);
 
 	/// <summary>
 	/// Deletes claim. Please note, this method not only stops keeping claim alive, but
@@ -54,7 +54,14 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 	private readonly ITimeSource _time;
 	private readonly IAliveKeeperSettings _settings;
 
-	private readonly ConcurrentDictionary<T, object?> _items = new();
+	private class InFlight
+	{
+		private readonly CancellationTokenSource _cts = new();
+		public CancellationToken Token => _cts.Token;
+		public void Cancel() => _cts.Cancel();
+	}
+
+	private readonly ConcurrentDictionary<T, InFlight> _inFlight = new();
 
 	private readonly Func<T[], Task<T[]>> _touchAction;
 	private readonly Func<T[], Task<T[]>>? _deleteAction;
@@ -90,7 +97,7 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 		_touchAction = touchAction.Required(nameof(touchAction));
 		_deleteAction = deleteAction;
 		_keyToString = keyToString;
-		
+
 		_syncPolicy = settings.SyncPolicy switch {
 			AliveKeeperSyncPolicy.Safe => new SafeSyncPolicy(),
 			_ when _settings.Concurrency <= 1 => new SafeSyncPolicy(),
@@ -131,20 +138,31 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 		};
 
 	private static T Pass(T x) => x;
-	private bool IsActive(T item) => _items.ContainsKey(item);
+	private bool IsActive(T item) => _inFlight.ContainsKey(item);
 	private bool IsDisposing => _cancel.IsCancellationRequested;
 
 	private T[] ActiveOnly(T[] items)
 	{
 		// this method is optimized for the fact that most of the time
 		// all of them will be active, so same array can be returned
-		return items.Length <= 0 || items.All(IsActive) 
+		return items.Length <= 0 || items.All(IsActive)
 			? items
 			: items.Where(IsActive).ToArray();
 	}
-	
-	private void Deactivate(T item) => _items.TryRemove(item, out _);
-	private bool TryActivate(T item) => _items.TryAdd(item, null);
+
+	private void Deactivate(T item, bool cancel = true)
+	{
+		var removed = _inFlight.TryRemove(item, out var inFlight);
+		if (removed && cancel) inFlight!.Cancel();
+	}
+
+	private InFlight? TryActivate(T item)
+	{
+		if (_inFlight.ContainsKey(item)) return null;
+
+		var inFlight = new InFlight();
+		return _inFlight.TryAdd(item, inFlight) ? inFlight : null;
+	}
 
 	private static Task<T[]> EmptyArrayOfT() => Task.FromResult(Array.Empty<T>());
 
@@ -232,21 +250,23 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 
 	private async Task TouchOneLoop(T item, CancellationToken token)
 	{
-		if (!TryActivate(item))
-			return;
+		var inFlight = TryActivate(item);
+		if (inFlight is null) return;
 
 		try
 		{
-			token = CancellationTokenSource.CreateLinkedTokenSource(token, _cancel.Token).Token;
+			var combinedToken = CancellationTokenSource.CreateLinkedTokenSource(
+				token, inFlight.Token).Token;
 
 			var interval = _settings.TouchInterval;
 			var retry = _settings.RetryInterval;
 
 			var display = Display(item);
 			var failed = 0;
-			while (!token.IsCancellationRequested)
+			
+			while (!combinedToken.IsCancellationRequested)
 			{
-				await Delay(failed > 0 ? retry : interval, token);
+				await Delay(failed > 0 ? retry : interval, combinedToken);
 
 				if (!IsActive(item)) return;
 
@@ -264,7 +284,7 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 		}
 		finally
 		{
-			Deactivate(item);
+			Deactivate(item, false);
 		}
 	}
 
@@ -335,7 +355,7 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 	/// </summary>
 	/// <param name="item">Item.</param>
 	/// <param name="token">Cancellation token.</param>
-	public void Upkeep(T item, CancellationToken token = default)
+	public void Register(T item, CancellationToken token = default)
 	{
 		if (IsDisposing)
 			return;
@@ -373,10 +393,10 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 
 		while (true)
 		{
-			if (_items.IsEmpty) break;
+			if (_inFlight.IsEmpty) break;
 
 			await Delay(TimeSpan.FromSeconds(delay), token);
-			delay = Math.Min(1, delay * 1.5);
+			delay = (delay * 1.5).NotMoreThan(1);
 		}
 	}
 

@@ -66,11 +66,12 @@ public abstract class AbstractAgent: IAgent, IAgentContext
 
 	/// <summary>Creates new agent.</summary>
 	/// <param name="logger">Logger.</param>
-	protected AbstractAgent(ILogger? logger)
+	/// <param name="token">Cancellation token.</param>
+	protected AbstractAgent(ILogger? logger, CancellationToken token = default)
 	{
 		Log = logger ?? NullLogger.Instance;
-		_cancel = new CancellationTokenSource();
-		_done = Task.Run(Loop);
+		_cancel = CancellationTokenSource.CreateLinkedTokenSource(token);
+		_done = Task.Run(Loop, _cancel.Token);
 	}
 
 	/// <inheritdoc />
@@ -149,7 +150,12 @@ public partial class Agent: AbstractAgent
 	/// <summary>Creates new agent.</summary>
 	/// <param name="logger">Logger.</param>
 	/// <param name="action">Action to be executed in the loop.</param>
-	public Agent(Func<IAgentContext, Task<bool>> action, ILogger? logger = null): base(logger) =>
+	/// <param name="token">Cancellation token.</param>
+	public Agent(
+		Func<IAgentContext, Task<bool>> action,
+		ILogger? logger = null,
+		CancellationToken token = default): 
+		base(logger, token) =>
 		_action = action.Required(nameof(action));
 
 	/// <inheritdoc />
@@ -166,12 +172,17 @@ public class Agent<T>: AbstractAgent, IAgent<T>, IAgentContext<T>
 	/// <summary>Creates new agent and starts it.</summary>
 	/// <param name="logger">Log.</param>
 	/// <param name="action">Agent's action.</param>
-	public Agent(Func<IAgentContext<T>, Task<bool>> action, ILogger? logger = null): base(logger) =>
+	/// <param name="token">Cancellation token.</param>
+	public Agent(
+		Func<IAgentContext<T>, Task<bool>> action, 
+		ILogger? logger = null,
+		CancellationToken token = default): 
+		base(logger, token) =>
 		_action = action.Required(nameof(action));
 
 	/// <inheritdoc />
 	protected override Task<bool> Execute() => _action(this);
-	
+
 	/// <summary>Enqueues item to be processed by agent.</summary>
 	/// <param name="item">Item.</param>
 	/// <exception cref="InvalidOperationException">Thrown when queue is full.</exception>

@@ -1,9 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Channels;
-using System.Threading.Tasks;
 
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
@@ -18,6 +15,9 @@ internal static class Extensions
 
 	public static T NotLessThan<T>(this T value, T limit, IComparer<T>? comparer = null) =>
 		Compare(value, limit, comparer) < 0 ? limit : value;
+	
+	public static T NotMoreThan<T>(this T value, T limit, IComparer<T>? comparer = null) =>
+		Compare(value, limit, comparer) > 0 ? limit : value;
 
 	public static void ForEach<T>(this IEnumerable<T> sequence, Action<T> action)
 	{
@@ -37,16 +37,41 @@ internal static class Extensions
 
 		return list;
 	}
+	
+	public static async Task<List<T>?> ReadManyAsync<T>(
+		this ChannelReader<T> reader, TimeSpan delay, 
+		int length = int.MaxValue,
+		Func<TimeSpan, CancellationToken, Task>? delayer = null,
+		CancellationToken token = default)
+	{
+		var list = await reader.ReadManyAsync(length, token);
+		if (list is null || list.Count >= length || delay <= TimeSpan.Zero)
+			return list;
 
-	public static async Task ReadManyMoreAsync<T>(
+		using var cancel = CancellationTokenSource.CreateLinkedTokenSource(token);
+		using var window = (delayer ?? Task.Delay)(delay, cancel.Token);
+		await reader.ReadManyMoreAsync(list, length, window);
+		cancel.Cancel();
+		return list;
+	}
+	
+	public static Task<List<T>?> ReadManyAsync<T>(
+		this ChannelReader<T> reader, TimeSpan delay, 
+		int length = int.MaxValue,
+		ITimeSource? timeSource = null,
+		CancellationToken token = default) =>
+		reader.ReadManyAsync(delay, length, (timeSource ?? TimeSource.Default).Delay, token);
+	
+	private static async Task ReadManyMoreAsync<T>(
 		this ChannelReader<T> reader, List<T> list, int length, Task window)
 	{
 		var completed = reader.Completion;
 		length -= list.Count; // length left
 
-		while (length > 0)
+		while (true)
 		{
 			Drain(reader, ref list!, ref length);
+			if (length <= 0) break;
 
 			var ready = reader.WaitToReadAsync().AsTask();
 			var evt = await Task.WhenAny(window, completed, ready);

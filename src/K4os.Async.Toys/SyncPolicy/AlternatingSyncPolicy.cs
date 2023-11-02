@@ -7,6 +7,7 @@ internal class AlternatingSyncPolicy: IAliveKeeperSyncPolicy
 		public int Waiting;
 		public int Active;
 		public int Granted;
+		public readonly ManualResetSignal Pulse = new(true);
 	}
 
 	// this is more for readability and debugging than anything else
@@ -14,20 +15,11 @@ internal class AlternatingSyncPolicy: IAliveKeeperSyncPolicy
 	private class TouchActionState: ActionState { }
 
 	private readonly object _lock = new();
-	private readonly ManualResetSignal _pulse = new();
 
 	private ActionState? _currentState;
-	private readonly ActionState _touch;
-	private readonly ActionState _delete;
+	private readonly ActionState _touch = new TouchActionState();
+	private readonly ActionState _delete = new DeleteActionState();
 
-	public AlternatingSyncPolicy()
-	{
-		_pulse.Set();
-		_currentState = null;
-		_touch = new TouchActionState();
-		_delete = new DeleteActionState();
-	}
-	
 	private async Task EnterAction(ActionState thisState, ActionState otherState)
 	{
 		var attempt = 0;
@@ -36,7 +28,7 @@ internal class AlternatingSyncPolicy: IAliveKeeperSyncPolicy
 			var success = TryEnterAction(attempt, thisState, otherState);
 			if (success) return;
 
-			await _pulse.WaitAsync();
+			await thisState.Pulse.WaitAsync();
 			attempt++;
 		}
 	}
@@ -58,13 +50,15 @@ internal class AlternatingSyncPolicy: IAliveKeeperSyncPolicy
 			if (!freeEntry && !grantedEntry)
 			{
 				if (attempt == 0) thisState.Waiting++;
+				thisState.Pulse.Reset(); // I am blocked, so other would also be
 				return false;
 			}
-			
+
+			if (attempt > 0) thisState.Waiting--;
 			if (grantedEntry) thisState.Granted--;
 			_currentState = thisState;
 			thisState.Active++;
-			_pulse.Reset();
+			
 			return true;
 		}
 	}
@@ -76,10 +70,11 @@ internal class AlternatingSyncPolicy: IAliveKeeperSyncPolicy
 			var stillActive = --thisState.Active > 0;
 			
 			if (stillActive) return;
-
+			
 			if (otherState.Waiting <= 0)
 			{
 				_currentState = null;
+				thisState.Pulse.Set(); // no others waiting, so reentering is ok
 			}
 			else
 			{
@@ -88,8 +83,9 @@ internal class AlternatingSyncPolicy: IAliveKeeperSyncPolicy
 				if (thisState.Waiting > 0) 
 					otherState.Granted = otherState.Waiting;
 			}
-
-			_pulse.Set();
+			
+			// other action is now allowed
+			otherState.Pulse.Set();
 		}
 	}
 

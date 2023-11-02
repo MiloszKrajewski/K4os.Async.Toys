@@ -65,7 +65,7 @@ public interface IAliveKeeperSettings
 public class AliveKeeperSettings: IAliveKeeperSettings
 {
 	/// <inheritdoc />
-	public TimeSpan TouchInterval { get; set; }
+	public TimeSpan TouchInterval { get; set; } = TimeSpan.FromSeconds(1);
 
 	/// <inheritdoc />
 	public int TouchBatchSize { get; set; } = 1;
@@ -77,7 +77,7 @@ public class AliveKeeperSettings: IAliveKeeperSettings
 	public int DeleteBatchSize { get; set; } = 1;
 
 	/// <inheritdoc />
-	public TimeSpan RetryInterval { get; set; }
+	public TimeSpan RetryInterval { get; set; } = TimeSpan.FromMilliseconds(100);
 
 	/// <inheritdoc />
 	public int RetryLimit { get; set; }
