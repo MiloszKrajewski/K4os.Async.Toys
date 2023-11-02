@@ -1,3 +1,6 @@
+## 0.0.14 (2023/11/02)
+* FIXED: multiple bugs in AliveKeeper
+
 ## 0.0.13 (2023/05/18)
 * ADDED: maximum concurrency setting
 * ADDED: concurrency policies for AliveKeeper
