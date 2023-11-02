@@ -1,0 +1,15 @@
+System.Reactive
+System.Interactive
+
+Microsoft.Extensions.Hosting
+Microsoft.Extensions.DependencyInjection
+Microsoft.Extensions.DependencyInjection.Abstractions
+Microsoft.Extensions.Logging
+Microsoft.Extensions.Logging.Abstractions
+
+Serilog
+Serilog.Sinks.Console
+Serilog.Sinks.File
+Serilog.Extensions.Hosting
+Serilog.Settings.Configuration 
+Serilog.Formatting.Compact

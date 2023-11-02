@@ -1,6 +1,4 @@
 using System;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace K4os.Async.Toys;
 
@@ -19,14 +17,22 @@ public class ManualResetSignal
 	/// <summary>
 	/// Creates new instance of <see cref="ManualResetSignal"/>.
 	/// </summary>
-	public ManualResetSignal() { }
+	/// <param name="state">Initial state.</param>
+	public ManualResetSignal(bool state = false)
+	{
+		if (state) _tcs.TrySetResult(true);
+	}
 
 	/// <summary>
 	/// Creates new instance of <see cref="ManualResetSignal"/> with specified <see cref="ITimeSource"/>.
 	/// </summary>
 	/// <param name="timeSource">Time source for executing delay if needed.</param>
-	public ManualResetSignal(ITimeSource? timeSource) =>
+	/// <param name="state">Initial state.</param>
+	public ManualResetSignal(ITimeSource? timeSource, bool state = false)
+	{
+		if (state) _tcs.TrySetResult(true);
 		_timeSource = timeSource;
+	}
 
 	private Task<bool> GetTask()
 	{
@@ -121,7 +127,5 @@ public class ManualResetSignal
 	}
 
 	private Task Delay(TimeSpan timeout, CancellationToken token) =>
-		_timeSource is null
-			? Task.Delay(timeout, token)
-			: _timeSource.Delay(timeout, token);
+		(_timeSource ?? TimeSource.Default).Delay(timeout, token);
 }

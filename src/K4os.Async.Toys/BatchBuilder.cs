@@ -84,30 +84,18 @@ public class BatchBuilder<TKey, TRequest, TResponse>:
 
 	private async Task RequestLoop()
 	{
+		var reader = _channel.Reader;
 		var length = _settings.BatchSize;
 		var delay = _settings.BatchDelay;
 
-		while (!_channel.Reader.Completion.IsCompleted)
+		while (!reader.Completion.IsCompleted)
 		{
-			var requests = await ReadManyAsync(length, delay);
+			var requests = await reader.ReadManyAsync(delay, length, _time.Delay);
 			if (requests is null) continue;
 
 			await _semaphore.WaitAsync();
 			RequestMany(requests).Forget();
 		}
-	}
-
-	private async Task<List<Mailbox>?> ReadManyAsync(int length, TimeSpan delay)
-	{
-		var list = await _channel.Reader.ReadManyAsync(length);
-		if (list is null || list.Count >= length || delay <= TimeSpan.Zero)
-			return list;
-
-		using var cancel = new CancellationTokenSource();
-		using var window = Delay(delay, cancel.Token);
-		await _channel.Reader.ReadManyMoreAsync(list, length, window);
-		cancel.Cancel();
-		return list;
 	}
 
 	/// <summary>Gets key from request. It will be used to match requests with responses.</summary>
