@@ -15,7 +15,8 @@ return;
 async Task Main()
 {
 	await Task.CompletedTask;
-
-	var sut = new AliveKeeperStress(host.Services.GetRequiredService<ILoggerFactory>());
-	await sut.LotsOfUpkeepLoops();
+	var loggerFactory = host.Services.GetRequiredService<ILoggerFactory>();
+	
+	var sut = new SubscriberStressTest(loggerFactory);
+	await sut.ConstantStreamOfMessages(TimeSpan.FromSeconds(10));
 }

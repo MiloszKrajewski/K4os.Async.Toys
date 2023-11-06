@@ -1,10 +1,8 @@
 using System;
-using System.Linq;
-using System.Threading.Channels;
-
-#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 using System.Diagnostics.CodeAnalysis;
-#endif
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading.Channels;
 
 namespace K4os.Async.Toys.Internal;
 
@@ -96,15 +94,15 @@ internal static class Extensions
 			TaskContinuationOptions.NotOnRanToCompletion);
 	}
 
-	public static T Required<T>(this T argument, string argumentName) where T: class =>
-		argument ?? throw new ArgumentNullException(argumentName);
+	public static T Required<T>(
+		this T argument,
+		[CallerArgumentExpression("argument")] string? argumentName = null) where T: class =>
+		argument ?? throw new ArgumentNullException(argumentName ?? "<unknown>");
 
 	public static T[] EmptyIfNull<T>(this T[]? argument) =>
 		argument ?? Array.Empty<T>();
 
-	#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 	[return: NotNullIfNotNull("fallback")]
-	#endif
 	public static TValue? TryGetOrDefault<TKey, TValue>(
 		this IDictionary<TKey, TValue> dictionary, TKey key, TValue? fallback = default) =>
 		dictionary.TryGetValue(key, out var result) ? result : fallback;

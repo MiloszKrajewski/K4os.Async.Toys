@@ -72,7 +72,7 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 	private readonly IAliveKeeperSyncPolicy _syncPolicy;
 
 	private readonly CancellationTokenSource _cancel = new();
-
+	
 	/// <summary>
 	/// Creates new instance of <see cref="AliveKeeper{T}"/>.
 	/// </summary>
@@ -213,10 +213,8 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 		}
 	}
 
-	private async Task TouchOne(string display, T item)
+	private async Task TouchOne(T item)
 	{
-		Log.LogDebug("Touching [{Key}]...", display);
-
 		try
 		{
 			await _touchBatch.Request(item);
@@ -227,10 +225,8 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 		}
 	}
 
-	private async Task DeleteOne(string display, T item)
+	private async Task DeleteOne(T item)
 	{
-		Log.LogDebug("Deleting [{Key}]...", display);
-
 		try
 		{
 			await _deleteBatch.Request(item);
@@ -248,9 +244,8 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 		// ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
 		_keyToString?.Invoke(key) ?? key.ToString() ?? "<null>";
 
-	private async Task TouchOneLoop(T item, CancellationToken token)
+	private async Task TouchOneLoop(T item, InFlight? inFlight, CancellationToken token)
 	{
-		var inFlight = TryActivate(item);
 		if (inFlight is null) return;
 
 		try
@@ -261,7 +256,6 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 			var interval = _settings.TouchInterval;
 			var retry = _settings.RetryInterval;
 
-			var display = Display(item);
 			var failed = 0;
 			
 			while (!combinedToken.IsCancellationRequested)
@@ -272,12 +266,12 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 
 				try
 				{
-					await TouchOne(display, item);
+					await TouchOne(item);
 					failed = 0;
 				}
 				catch (Exception e)
 				{
-					if (!OnOperationFailed(e, "Touch", display, ++failed))
+					if (!ShouldRetry(e, "Touch", Display(item), ++failed))
 						return;
 				}
 			}
@@ -300,7 +294,6 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 		{
 			var retry = _settings.RetryInterval;
 
-			var display = Display(item);
 			var failed = 0;
 			while (!token.IsCancellationRequested)
 			{
@@ -317,23 +310,25 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 
 				try
 				{
-					await DeleteOne(display, item);
+					await DeleteOne(item);
 					return;
 				}
 				catch (Exception e)
 				{
-					if (!OnOperationFailed(e, "Delete", display, ++failed))
+					if (!ShouldRetry(e, "Delete", Display(item), ++failed))
 						return;
 				}
 			}
 		}
 		finally
 		{
+			// this is questionable, maybe we could deactivate it as soon as this method is called?
+			// this would require some changes as we still need to monitor Forget() calls
 			Deactivate(item);
 		}
 	}
 
-	private bool OnOperationFailed(
+	private bool ShouldRetry(
 		Exception exception, string operation, string display, int failed)
 	{
 		var retryLimit = _settings.RetryLimit;
@@ -360,7 +355,8 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 		if (IsDisposing)
 			return;
 
-		Task.Run(() => TouchOneLoop(item, token), token).Forget();
+		var inFlight = TryActivate(item);
+		Task.Run(() => TouchOneLoop(item, inFlight, token), token).Forget();
 	}
 
 	/// <summary>
