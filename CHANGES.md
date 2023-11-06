@@ -1,3 +1,7 @@
+## 0.0.15 (2023/11/06)
+* FIXED: even more bugs in AliveKeeper
+* ADDED: BatchSubscriber allows to subscribe to any poll-able source
+
 ## 0.0.14 (2023/11/02)
 * FIXED: multiple bugs in AliveKeeper
 

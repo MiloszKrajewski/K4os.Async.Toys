@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace K4os.Async.Toys.Internal;
@@ -85,6 +85,7 @@ internal class DisposableBag: IDisposable
 	/// <typeparam name="T">Type of object.</typeparam>
 	/// <param name="item">The disposable item.</param>
 	/// <returns>Same item for further processing.</returns>
+	[return: NotNullIfNotNull("item")]
 	public T? Add<T>(T? item) where T: IDisposable
 	{
 		if (item is null) return item;

@@ -71,7 +71,7 @@ public class AliveKeeperSettings: IAliveKeeperSettings
 	public int TouchBatchSize { get; set; } = 1;
 
 	/// <inheritdoc />
-	public TimeSpan TouchBatchDelay { get; set; }
+	public TimeSpan TouchBatchDelay { get; set; } = TimeSpan.Zero;
 
 	/// <inheritdoc />
 	public int DeleteBatchSize { get; set; } = 1;
@@ -80,7 +80,7 @@ public class AliveKeeperSettings: IAliveKeeperSettings
 	public TimeSpan RetryInterval { get; set; } = TimeSpan.FromMilliseconds(100);
 
 	/// <inheritdoc />
-	public int RetryLimit { get; set; }
+	public int RetryLimit { get; set; } = 0;
 
 	/// <inheritdoc />
 	public int Concurrency { get; set; } = 1;

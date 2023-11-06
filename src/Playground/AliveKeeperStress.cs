@@ -12,7 +12,8 @@ public class AliveKeeperStress
 {
 	private const int HANDLER_CONCURRENCY = 1000;
 	private const int JOB_DURATION = 0;
-	private const int NETWORK_ROUNDTRIP = 10;
+	private const int RECEIVE_ROUNDTRIP = 0;
+	private const int DELETE_ROUNDTRIP = 50;
 	private const int BATCH_SIZE = 10;
 
 	protected readonly ILogger<AliveKeeperStress> Log;
@@ -103,7 +104,8 @@ public class AliveKeeperStress
 			await Task.Delay(JOB_DURATION, token);
 			Interlocked.Increment(ref _handledTotal);
 			var delete = keeper.Delete(job, CancellationToken.None);
-			delete.Forget();
+			await delete;
+			// delete.Forget();
 		}
 		catch (OperationCanceledException) when (token.IsCancellationRequested)
 		{
@@ -117,7 +119,7 @@ public class AliveKeeperStress
 
 	private async Task<Guid[]> ReceiveMany()
 	{
-		await Task.Delay(NETWORK_ROUNDTRIP);
+		await Task.Delay(RECEIVE_ROUNDTRIP);
 		var guids = Enumerable.Range(0, BATCH_SIZE).Select(_ => Guid.NewGuid()).ToArray();
 		foreach (var g in guids) _items.TryAdd(g, new Meta { LastTouched = DateTime.UtcNow });
 
@@ -133,7 +135,7 @@ public class AliveKeeperStress
 		Log.LogInformation(
 			"Touching {Count} items (id: {Id}, concurrent: {Concurrent}, total: {Total})",
 			guids.Length, id, concurrent, total);
-		await Task.Delay(NETWORK_ROUNDTRIP);
+		await Task.Delay(DELETE_ROUNDTRIP);
 
 		var now = DateTime.UtcNow;
 		foreach (var g in guids)
@@ -166,7 +168,7 @@ public class AliveKeeperStress
 			"Deleting {Count} items (id: {Id}, concurrent: {Concurrent})", guids.Length, id,
 			concurrent);
 
-		await Task.Delay(NETWORK_ROUNDTRIP);
+		await Task.Delay(DELETE_ROUNDTRIP);
 		foreach (var g in guids)
 		{
 			_items.TryRemove(g, out _);
