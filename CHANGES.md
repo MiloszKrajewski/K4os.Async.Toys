@@ -1,3 +1,6 @@
+## 0.0.16 (2023/11/07)
+* ADDED: exposed previously internal DisposableBag
+
 ## 0.0.15 (2023/11/06)
 * FIXED: even more bugs in AliveKeeper
 * ADDED: BatchSubscriber allows to subscribe to any poll-able source
