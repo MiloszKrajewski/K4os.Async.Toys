@@ -6,7 +6,7 @@ namespace K4os.Async.Toys.Internal;
 
 /// <summary>A disposable collection of disposables.</summary>
 /// <seealso cref="IDisposable" />
-internal class DisposableBag: IDisposable
+public class DisposableBag: IDisposable
 {
 	private readonly object _mutex = new();
 	private readonly List<IDisposable> _bag = new();

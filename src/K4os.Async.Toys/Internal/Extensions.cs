@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading.Channels;
 
 namespace K4os.Async.Toys.Internal;
 
@@ -21,77 +20,6 @@ internal static class Extensions
 	{
 		foreach (var item in sequence)
 			action(item);
-	}
-
-	public static async Task<List<T>?> ReadManyAsync<T>(
-		this ChannelReader<T> reader, int length = int.MaxValue,
-		CancellationToken token = default)
-	{
-		var ready = await reader.WaitToReadAsync(token);
-		if (!ready) return null;
-
-		var list = default(List<T>);
-		Drain(reader, ref list, ref length);
-
-		return list;
-	}
-	
-	public static async Task<List<T>?> ReadManyAsync<T>(
-		this ChannelReader<T> reader, TimeSpan delay, 
-		int length = int.MaxValue,
-		Func<TimeSpan, CancellationToken, Task>? delayer = null,
-		CancellationToken token = default)
-	{
-		var list = await reader.ReadManyAsync(length, token);
-		if (list is null || list.Count >= length || delay <= TimeSpan.Zero)
-			return list;
-
-		using var cancel = CancellationTokenSource.CreateLinkedTokenSource(token);
-		using var window = (delayer ?? Task.Delay)(delay, cancel.Token);
-		await reader.ReadManyMoreAsync(list, length, window);
-		cancel.Cancel();
-		return list;
-	}
-	
-	public static Task<List<T>?> ReadManyAsync<T>(
-		this ChannelReader<T> reader, TimeSpan delay, 
-		int length = int.MaxValue,
-		ITimeSource? timeSource = null,
-		CancellationToken token = default) =>
-		reader.ReadManyAsync(delay, length, (timeSource ?? TimeSource.Default).Delay, token);
-	
-	private static async Task ReadManyMoreAsync<T>(
-		this ChannelReader<T> reader, List<T> list, int length, Task window)
-	{
-		var completed = reader.Completion;
-		length -= list.Count; // length left
-
-		while (true)
-		{
-			Drain(reader, ref list!, ref length);
-			if (length <= 0) break;
-
-			var ready = reader.WaitToReadAsync().AsTask();
-			var evt = await Task.WhenAny(window, completed, ready);
-			if (evt != ready) break;
-		}
-	}
-
-	private static void Drain<T>(
-		ChannelReader<T> reader, ref List<T>? list, ref int length)
-	{
-		while (length > 0 && reader.TryRead(out var item))
-		{
-			(list ??= new List<T>()).Add(item);
-			length--;
-		}
-	}
-
-	public static void Forget(this Task task)
-	{
-		task.ContinueWith(
-			t => t.Exception, // clear exception so TPL stops complaining
-			TaskContinuationOptions.NotOnRanToCompletion);
 	}
 
 	public static T Required<T>(
