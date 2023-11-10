@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using K4os.Async.Toys.Internal;
 using System.Linq;
-using System.Threading;
 using System.Threading.Channels;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -194,7 +191,7 @@ public class BatchBuilder<TKey, TRequest, TResponse>:
 	{
 		if (!disposing) return;
 
-		_channel.Writer.Complete();
+		_ = _channel.Writer.TryComplete();
 
 		try
 		{

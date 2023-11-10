@@ -1,9 +1,21 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using K4os.Async.Toys.Internal;
+﻿using K4os.Async.Toys.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace K4os.Async.Toys;
+
+/// <summary>
+/// Abstract base class for batch subscribers. Contains some static fields and helper methods.
+/// Do not use directly.
+/// </summary>
+public abstract class BatchSubscriber
+{
+	/// <summary>Minimum interval between touch operations.</summary>
+	protected static readonly TimeSpan MinimumTouchInterval = TimeSpan.FromMilliseconds(10);
+	
+	/// <summary>Minimum interval between retry attempts. This is to prevent retry storms.</summary>
+	protected static readonly TimeSpan MinimumRetryInterval = TimeSpan.FromMilliseconds(10);
+}
 
 /// <summary>
 /// A subscriber to any data source that supports batched polling.
@@ -11,14 +23,10 @@ namespace K4os.Async.Toys;
 /// <typeparam name="TMessage">A type of a message being polled.</typeparam>
 /// <typeparam name="TReceipt">A message receipt. Might be it's ID (not great) or unique
 /// identifier of temporary ownership (better).</typeparam>
-[SuppressMessage("ReSharper", "StaticMemberInGenericType")]
-public class BatchSubscriber<TMessage, TReceipt>: IDisposable
+public class BatchSubscriber<TMessage, TReceipt>: BatchSubscriber, IDisposable
 	where TMessage: notnull
 	where TReceipt: notnull
 {
-	private static readonly TimeSpan MinimumTouchInterval = TimeSpan.FromMilliseconds(10);
-	private static readonly TimeSpan MinimumRetryInterval = TimeSpan.FromMilliseconds(10);
-
 	/// <summary>Logger.</summary>
 	protected readonly ILogger Log;
 

@@ -49,21 +49,18 @@ public class ObservableEvent<T>: IObserver<T>, IObservable<T>
 	/// <inheritdoc />
 	public void OnNext(T value)
 	{
-		var observers = Observers();
-		observers.ForEach(o => o.OnNext(value));
+		Observers().ForEach(o => o.OnNext(value));
 	}
 
 	/// <inheritdoc />
 	public void OnCompleted()
 	{
-		var observers = Observers();
-		observers.ForEach(o => o.OnCompleted());
+		Observers().ForEach(o => o.OnCompleted());
 	}
 
 	/// <inheritdoc />
 	public void OnError(Exception error)
 	{
-		var observers = Observers();
-		observers.ForEach(o => o.OnError(error));
+		Observers().ForEach(o => o.OnError(error));
 	}
 }
