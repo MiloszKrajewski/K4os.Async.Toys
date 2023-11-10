@@ -1,3 +1,6 @@
+## 0.0.17 (2023/11/10)
+* FIXED: double dispose on BatchBuilder was throwing an exception
+
 ## 0.0.16 (2023/11/07)
 * ADDED: exposed previously internal DisposableBag
 
