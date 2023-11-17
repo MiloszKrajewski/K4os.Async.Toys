@@ -1,3 +1,6 @@
+## 0.0.18 (2023/11/17)
+* ADDED: Configurable PollerCount in BatchBuilder
+
 ## 0.0.17 (2023/11/10)
 * FIXED: double dispose on BatchBuilder was throwing an exception
 

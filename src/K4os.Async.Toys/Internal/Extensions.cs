@@ -15,6 +15,15 @@ internal static class Extensions
 	
 	public static T NotMoreThan<T>(this T value, T limit, IComparer<T>? comparer = null) =>
 		Compare(value, limit, comparer) > 0 ? limit : value;
+	
+	public static IEnumerable<T> TapEach<T>(this IEnumerable<T> sequence, Action<T> action)
+	{
+		foreach (var item in sequence)
+		{
+			action(item);
+			yield return item;
+		}
+	}
 
 	public static void ForEach<T>(this IEnumerable<T> sequence, Action<T> action)
 	{

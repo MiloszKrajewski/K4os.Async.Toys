@@ -247,26 +247,26 @@ public class AliveKeeper<T>: IAliveKeeper<T> where T: notnull
 	private async Task TouchOneLoop(T item, InFlight? inFlight, CancellationToken token)
 	{
 		if (inFlight is null) return;
+		
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(
+			token, inFlight.Token);
 
 		try
 		{
-			var combinedToken = CancellationTokenSource.CreateLinkedTokenSource(
-				token, inFlight.Token).Token;
-
 			var interval = _settings.TouchInterval;
 			var retry = _settings.RetryInterval;
 
 			var failed = 0;
 			
-			while (!combinedToken.IsCancellationRequested)
+			while (!cts.Token.IsCancellationRequested)
 			{
-				await Delay(failed > 0 ? retry : interval, combinedToken);
+				await Delay(failed > 0 ? retry : interval, cts.Token).ConfigureAwait(false);
 
 				if (!IsActive(item)) return;
 
 				try
 				{
-					await TouchOne(item);
+					await TouchOne(item).ConfigureAwait(false);
 					failed = 0;
 				}
 				catch (Exception e)
