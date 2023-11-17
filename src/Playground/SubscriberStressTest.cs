@@ -8,12 +8,15 @@ namespace Playground;
 
 public class SubscriberStressTest: IBatchPoller<SubscriberStressTest.Message, long>
 {
-	private const int TOTAL_TIME = 10;
-	private const int HANDLER_CONCURRENCY = int.MaxValue;
-	private const int BATCH_CONCURRENCY = int.MaxValue;
-	private const int JOB_DURATION = 0;
+	private const int TOTAL_TIME = 30;
+
 	private const int RECEIVE_ROUNDTRIP = 0;
 	private const int UPDATE_ROUNDTRIP = 0;
+	private const int JOB_DURATION = 0;
+	
+	private const int HANDLER_CONCURRENCY = 16;
+	private const int POLLER_CONCURRENCY = 8;
+	private const int BATCH_CONCURRENCY = 16;
 	private const int BATCH_SIZE = 10;
 	
 	private static readonly TimeSpan TOUCH_INTERVAL = TimeSpan.FromSeconds(5);
@@ -44,7 +47,9 @@ public class SubscriberStressTest: IBatchPoller<SubscriberStressTest.Message, lo
 				TouchBatchDelay = TimeSpan.FromMilliseconds(100),
 				AlternateBatches = true,
 				AsynchronousDeletes = true,
+				InternalQueueSize = 8,
 				HandlerCount = HANDLER_CONCURRENCY,
+				PollerCount = POLLER_CONCURRENCY,
 			});
 
 		var limit = Task.Delay(TimeSpan.FromSeconds(TOTAL_TIME));

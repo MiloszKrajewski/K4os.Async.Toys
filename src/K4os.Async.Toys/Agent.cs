@@ -33,6 +33,9 @@ public interface IAgentContext
 
 	/// <summary>Cancellation token.</summary>
 	CancellationToken Token { get; }
+	
+	/// <summary>Agent instance.</summary>
+	IAgent Agent { get; }
 }
 
 /// <summary>Agent's context from inside handler.</summary>
@@ -77,7 +80,8 @@ public abstract class AbstractAgent: IAgent, IAgentContext
 	/// <inheritdoc />
 	public void Start() => _ready.TrySetResult(null);
 
-	private Task Stop()
+	/// <inheritdoc />
+	public Task Stop()
 	{
 		_cancel.Cancel();
 		_ready.TrySetCanceled(_cancel.Token);
@@ -140,6 +144,9 @@ public abstract class AbstractAgent: IAgent, IAgentContext
 
 	/// <summary>Cancellation token.</summary>
 	CancellationToken IAgentContext.Token => _cancel.Token;
+
+	/// <inheritdoc />
+	public IAgent Agent => this;
 }
 
 /// <summary>Agent base class.</summary>

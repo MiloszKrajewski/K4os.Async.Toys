@@ -1,4 +1,5 @@
-﻿using K4os.Async.Toys.Internal;
+﻿using System.Threading.Channels;
+using K4os.Async.Toys.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -12,7 +13,7 @@ public abstract class BatchSubscriber
 {
 	/// <summary>Minimum interval between touch operations.</summary>
 	protected static readonly TimeSpan MinimumTouchInterval = TimeSpan.FromMilliseconds(10);
-	
+
 	/// <summary>Minimum interval between retry attempts. This is to prevent retry storms.</summary>
 	protected static readonly TimeSpan MinimumRetryInterval = TimeSpan.FromMilliseconds(10);
 }
@@ -32,14 +33,15 @@ public class BatchSubscriber<TMessage, TReceipt>: BatchSubscriber, IDisposable
 
 	private readonly IBatchPoller<TMessage, TReceipt> _poller;
 	private readonly Func<TMessage, CancellationToken, Task> _handler;
-	private readonly SemaphoreSlim _semaphore;
-
+	private readonly IAliveKeeper<TReceipt> _keeper;
 	private readonly CancellationTokenSource _cancel;
 
-	private readonly IAgent _agent;
-	private readonly IAliveKeeper<TReceipt> _keeper;
-
-	private readonly bool _asyncDelete;
+	private readonly IAgent _supervisor;
+	private readonly Channel<Burrito> _burritos;
+	private readonly IBatchSubscriberSettings _settings;
+	
+	private readonly SemaphoreSlim _runnerGate;
+	private readonly SemaphoreSlim _pollerGate;
 
 	private record struct Burrito(TMessage Message, TReceipt Receipt);
 
@@ -57,13 +59,20 @@ public class BatchSubscriber<TMessage, TReceipt>: BatchSubscriber, IDisposable
 		ILogger? logger = null)
 	{
 		Log = logger ?? NullLogger.Instance;
-		
-		settings = Validate(settings ?? new BatchSubscriberSettings());
-		_asyncDelete = settings.AsynchronousDeletes;
+
+		_settings = settings = Validate(settings ?? new BatchSubscriberSettings());
 		_poller = poller;
 		_handler = handler;
 		_cancel = CancellationTokenSource.CreateLinkedTokenSource(token);
-		_semaphore = new SemaphoreSlim(settings.HandlerCount);
+
+		_burritos = Channel.CreateBounded<Burrito>(
+			new BoundedChannelOptions(settings.InternalQueueSize) {
+				SingleReader = false,
+				SingleWriter = false,
+				FullMode = BoundedChannelFullMode.Wait,
+				AllowSynchronousContinuations = false,
+			});
+
 		_keeper = AliveKeeper.Create<TReceipt>(
 			TouchMany,
 			DeleteMany,
@@ -81,7 +90,11 @@ public class BatchSubscriber<TMessage, TReceipt>: BatchSubscriber, IDisposable
 					: AliveKeeperSyncPolicy.Unrestricted,
 			},
 			logger);
-		_agent = Agent.Create(Loop, logger, _cancel.Token);
+		
+		_pollerGate = new SemaphoreSlim(settings.PollerCount);
+		_runnerGate = new SemaphoreSlim(settings.HandlerCount);
+		
+		_supervisor = Agent.Create(Supervisor, logger, _cancel.Token);
 	}
 
 	private static IBatchSubscriberSettings Validate(IBatchSubscriberSettings settings) =>
@@ -95,10 +108,13 @@ public class BatchSubscriber<TMessage, TReceipt>: BatchSubscriber, IDisposable
 			TouchInterval = settings.TouchInterval.NotLessThan(MinimumTouchInterval),
 			TouchBatchDelay = settings.TouchBatchDelay.NotLessThan(TimeSpan.Zero),
 			AlternateBatches = settings.AlternateBatches,
+			AsynchronousDeletes = settings.AsynchronousDeletes,
+			InternalQueueSize = settings.InternalQueueSize.NotLessThan(1),
+			PollerCount = settings.PollerCount.NotLessThan(1),
 		};
 
 	/// <summary>Starts polling loop.</summary>
-	public void Start() { _agent.Start(); }
+	public void Start() { _supervisor.Start(); }
 
 	private string KeyOf(TReceipt message) =>
 		_poller.IdentityOf(message);
@@ -108,51 +124,89 @@ public class BatchSubscriber<TMessage, TReceipt>: BatchSubscriber, IDisposable
 
 	private Task<TReceipt[]> TouchMany(TReceipt[] receipts) =>
 		_poller.Touch(receipts, _cancel.Token);
-
-	private static Task ForkOrWait<T>(
-		bool wait,
-		T state, Func<T, CancellationToken, Task> func, CancellationToken token)
+	
+	private static async Task GatedFork(
+		SemaphoreSlim gate, Func<CancellationToken, Task> func, CancellationToken token)
 	{
-		if (wait) return func(state, token);
+		await gate.WaitAsync(token);
+		Task
+			.Run(() => func(token), token)
+			.ContinueWith(_ => gate.Release(), CancellationToken.None)
+			.Forget();
+	}
 
-		Fork(state, func, token);
+	private static Task ForkOrWait(
+		bool wait, Func<CancellationToken, Task> func, CancellationToken token)
+	{
+		if (wait) return func(token);
+
+		Task.Run(() => func(token), token).Forget();
 		return Task.CompletedTask;
 	}
-	
-	private static void Fork<T>(
-		T state, Func<T, CancellationToken, Task?> func, CancellationToken token)
+
+	private async Task Supervisor(IAgentContext context)
 	{
-		Task.Run(() => func(state, token), token).Forget();
+		var token = context.Token;
+		var interval = TimeSpan.FromSeconds(1);
+
+		var poller = Agent.Create(Poller, Log, token);
+		var runner = Agent.Create(Runner, Log, token);
+		
+		runner.Start();
+		poller.Start();
+
+		try
+		{
+			while (!token.IsCancellationRequested)
+			{
+				// we will need to periodically review number of pollers/runners later
+				// for now this is just idle loop
+				await Task.Delay(interval, token);
+			}
+		}
+		catch (OperationCanceledException) when (token.IsCancellationRequested)
+		{
+			// ignore
+		}
+		finally
+		{
+			await poller.Done;
+			_burritos.Writer.Complete();
+			await runner.Done;
+		}
 	}
 
-	private async Task Loop(IAgentContext context)
+	private async Task<bool> Runner(IAgentContext context)
 	{
 		var token = context.Token;
 
 		while (!token.IsCancellationRequested)
 		{
-			var messages = await _poller.Receive(token);
-			if (messages.Length == 0) continue;
-
-			var burritos = messages
-				.Select(m => new Burrito(m, _poller.ReceiptFor(m)))
-				.ToArray();
-
-			foreach (var b in burritos)
-			{
-				Register(b);
-			}
-
-			foreach (var b in burritos)
-			{
-				await _semaphore.WaitAsync(token);
-				Fork(b, Handle, token);
-			}
+			var burrito = await _burritos.Reader.ReadAsync(token);
+			await GatedFork(_runnerGate, ct => HandleOne(burrito, ct), token);
 		}
+
+		return false;
 	}
 
-	private void Register(Burrito burrito) =>
-		_keeper.Register(burrito.Receipt, _cancel.Token);
+	private async Task<bool> Poller(IAgentContext context)
+	{
+		var token = context.Token;
+
+		while (!token.IsCancellationRequested)
+		{
+			await GatedFork(_pollerGate, ReceiveMany, token);
+		}
+
+		return false;
+	}
+	
+	private Burrito Register(TMessage message)
+	{
+		var receipt = _poller.ReceiptFor(message);
+		_keeper.Register(receipt, _cancel.Token);
+		return new Burrito(message, receipt);
+	}
 
 	private void Forget(Burrito burrito) =>
 		_keeper.Forget(burrito.Receipt);
@@ -160,21 +214,28 @@ public class BatchSubscriber<TMessage, TReceipt>: BatchSubscriber, IDisposable
 	private Task Complete(Burrito burrito, CancellationToken token) =>
 		_keeper.Delete(burrito.Receipt, token);
 
-	private async Task Handle(Burrito burrito, CancellationToken token)
+	private async Task ReceiveMany(CancellationToken token)
 	{
+		var messages = await _poller.Receive(token);
+		var burritos = messages.Select(Register).ToArray();
+
+		foreach (var burrito in burritos)
+			await _burritos.Writer.WriteAsync(burrito, token);
+	}
+
+	private async Task HandleOne(Burrito burrito, CancellationToken token)
+	{
+		var asyncDelete = _settings.AsynchronousDeletes;
+		
 		try
 		{
 			await _handler(burrito.Message, token);
-			await ForkOrWait(!_asyncDelete, burrito, Complete, token);
+			await ForkOrWait(!asyncDelete, ct => Complete(burrito, ct), token);
 		}
 		catch (Exception ex)
 		{
 			Log.LogError(ex, "Failed to handle message {Receipt}", burrito.Receipt);
 			Forget(burrito);
-		}
-		finally
-		{
-			_semaphore.Release();
 		}
 	}
 
@@ -186,7 +247,7 @@ public class BatchSubscriber<TMessage, TReceipt>: BatchSubscriber, IDisposable
 	{
 		if (!disposing) return;
 
-		_agent.Dispose();
+		_supervisor.Dispose();
 		_keeper.Dispose();
 	}
 

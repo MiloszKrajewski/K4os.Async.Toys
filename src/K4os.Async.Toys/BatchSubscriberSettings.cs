@@ -5,7 +5,7 @@ namespace K4os.Async.Toys;
 /// </summary>
 public interface IBatchSubscriberSettings
 {
-	/// <summary>Number of handlers to be used to process messages.</summary>
+	/// <summary>Number of handlers to be used to process messages concurrently.</summary>
 	int HandlerCount { get; set; }
 	
 	/// <summary>
@@ -53,6 +53,19 @@ public interface IBatchSubscriberSettings
 	/// messages will not ensure everything is deleted, but give a little bit higher throughput.
 	/// </summary>
 	bool AsynchronousDeletes { get; set; }
+
+	/// <summary>
+	/// Length of internal queue. Increasing it may help smoothing processing speed, but
+	/// using 1 is also fine. 
+	/// </summary>
+	int InternalQueueSize { get; set; }
+
+	/// <summary>
+	/// Number of source date pollers. Affects how quickly new job as acquired, increase it only
+	/// if your runners are idle, but not overdo it as all messages which are polled but not handled
+	/// yet will need to be tracked and touched periodically. Default value is usually good enough.
+	/// </summary>
+	int PollerCount { get; set; }
 }
 
 /// <summary>
@@ -89,4 +102,10 @@ public class BatchSubscriberSettings: IBatchSubscriberSettings
 
 	/// <inheritdoc />
 	public bool AsynchronousDeletes { get; set; } = false;
+
+	/// <inheritdoc />
+	public int InternalQueueSize { get; set; } = 1;
+
+	/// <inheritdoc />
+	public int PollerCount { get; set; } = 1;
 }
